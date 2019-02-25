@@ -10,12 +10,20 @@ public class Packet {
     long timestamp;
     String snifferMac;
     String deviceMac;
+    boolean global;
     String rawData;
 
     public Packet(long timestamp, String snifferMac, String deviceMac, String rawData) {
         this.timestamp = timestamp;
         this.snifferMac = snifferMac;
         this.deviceMac = deviceMac;
+        char letter = this.deviceMac.charAt(1);
+        if(letter == '0' || letter == '1' || letter == '4' || letter == '5' || letter == '8' || letter == '9' || letter == 'c' || letter == 'd'){
+            this.global = true;
+        }
+        else{
+            this.global = false;
+        }
         this.rawData = rawData;
     }
 
@@ -26,6 +34,15 @@ public class Packet {
     public void setId(String id) {
         this.id = id;
     }
+
+    public boolean isGlobal() {
+        return global;
+    }
+
+    public void setGlobal(boolean global) {
+        this.global = global;
+    }
+
     public long getTimestamp() {
         return timestamp;
     }

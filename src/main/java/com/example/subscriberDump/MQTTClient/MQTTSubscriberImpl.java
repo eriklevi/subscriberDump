@@ -120,7 +120,7 @@ public class MQTTSubscriberImpl extends MQTTConfig implements MqttCallback, MQTT
     public void messageArrived(String topic, MqttMessage mqttMessage) throws Exception {
         String time = new Timestamp(System.currentTimeMillis()).toString();
         logger.info("Arrivato messaggio su topic " + topic +" timestamp "+time);
-        String payload = DatatypeConverter.printHexBinary(mqttMessage.getPayload());
+        String payload = DatatypeConverter.printHexBinary(mqttMessage.getPayload()).toLowerCase();
         logger.info(payload);
         //serializziamo i dati come string visto che le analisi fatte sono a livello dei caratteri
         String snifferMac = payload.substring(0, 2)+ ":" + payload.substring(2,4) +":"+payload.substring(4, 6)+ ":"+payload.substring(6, 8)+ ":"+payload.substring(8, 10)+ ":"+payload.substring(10, 12);
