@@ -31,25 +31,25 @@ public class MQTTSubscriber implements MqttCallback, DisposableBean, Initializin
     private static final Logger logger = LoggerFactory.getLogger(MQTTSubscriber.class);
 
     private String broker;
-    @Value("${client-id}")
+    @Value("${mqtt.client-id}")
     private String clientId;
-    @Value("${topic}")
+    @Value("${mqtt.topic}")
     private String topic;
-    @Value("${qos}")
+    @Value("${mqtt.qos}")
     private int qos;
-    @Value("${ssl}")
+    @Value("${mqtt.ssl}")
     private Boolean hasSSL;
-    @Value("${auto-reconnect}")
+    @Value("${mqtt.auto-reconnect}")
     private Boolean autoReconnect;
-    @Value("${port}")
+    @Value("${mqtt.port}")
     private Integer port;
-    @Value("${use-credentials}")
+    @Value("${mqtt.use-credentials}")
     private boolean useCredentials;
-    @Value("${username}")
+    @Value("${mqtt.username}")
     private String userName;
-    @Value("${password}")
+    @Value("${mqtt.password}")
     private String password;
-    @Value("${keep-alive-minutes}")
+    @Value("${mqtt.keep-alive-seconds}")
     private int keepAliveInterval;
 
     private MqttClient mqttClient;
