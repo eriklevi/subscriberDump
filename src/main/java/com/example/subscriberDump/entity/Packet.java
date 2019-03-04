@@ -3,28 +3,33 @@ package com.example.subscriberDump.entity;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Document("rawPackets")
 public class Packet {
     @Id
-    String id;
-    long timestamp;
-    String snifferMac;
-    String deviceMac;
-    boolean global;
-    String rawData;
+    private String id;
+    private long timestamp;
+    private String snifferMac;
+    private String deviceMac;
+    private boolean global;
+    private String rawData;
+    private int sequenceNumber;
+    private List<TaggedParameter> taggedParameters;
+    private int taggedParametersLength;
 
-    public Packet(long timestamp, String snifferMac, String deviceMac, String rawData) {
+    public Packet(){}
+
+    public Packet(long timestamp, String snifferMac, String deviceMac, boolean global, String rawData, int sequenceNumber, List<TaggedParameter> taggedParameters, int taggedParametersLength) {
         this.timestamp = timestamp;
         this.snifferMac = snifferMac;
         this.deviceMac = deviceMac;
-        char letter = this.deviceMac.charAt(1);
-        if(letter == '0' || letter == '1' || letter == '4' || letter == '5' || letter == '8' || letter == '9' || letter == 'c' || letter == 'd'){
-            this.global = true;
-        }
-        else{
-            this.global = false;
-        }
+        this.global = global;
         this.rawData = rawData;
+        this.sequenceNumber = sequenceNumber;
+        this.taggedParameters = taggedParameters;
+        this.taggedParametersLength = taggedParametersLength;
     }
 
     public String getId() {
@@ -50,6 +55,7 @@ public class Packet {
     public void setTimestamp(long timestamp) {
         this.timestamp = timestamp;
     }
+
     public String getSnifferMac() {
         return snifferMac;
     }
@@ -72,5 +78,29 @@ public class Packet {
 
     public void setRawData(String rawData) {
         this.rawData = rawData;
+    }
+
+    public int getSequenceNumber() {
+        return sequenceNumber;
+    }
+
+    public void setSequenceNumber(int sequenceNumber) {
+        this.sequenceNumber = sequenceNumber;
+    }
+
+    public List<TaggedParameter> getTaggedParameters() {
+        return taggedParameters;
+    }
+
+    public void setTaggedParameters(List<TaggedParameter> taggedParameters) {
+        this.taggedParameters = taggedParameters;
+    }
+
+    public int getTaggedParametersLength() {
+        return taggedParametersLength;
+    }
+
+    public void setTaggedParametersLength(int taggedParametersLength) {
+        this.taggedParametersLength = taggedParametersLength;
     }
 }
