@@ -134,24 +134,29 @@ public class MQTTSubscriber implements MqttCallback, DisposableBean, Initializin
      */
     @Override
     public void messageArrived(String topic, MqttMessage mqttMessage) throws Exception {
-        String time = new Timestamp(System.currentTimeMillis()).toString();
-        logger.info("Arrivato messaggio su topic " + topic +" timestamp "+time);
-        String payload = DatatypeConverter.printHexBinary(mqttMessage.getPayload()).toLowerCase();
-        //serializziamo i dati come string visto che le analisi fatte sono a livello dei caratteri
-        String snifferMac = payload.substring(0, 2)+ ":" + payload.substring(2,4) +":"+payload.substring(4, 6)+ ":"+payload.substring(6, 8)+ ":"+payload.substring(8, 10)+ ":"+payload.substring(10, 12);
-        String deviceMac = payload.substring(32, 34)+ ":" + payload.substring(34,36) +":"+payload.substring(36, 38)+ ":"+payload.substring(38, 40)+ ":"+payload.substring(40, 42)+ ":"+payload.substring(42, 44);
-        char letter = deviceMac.charAt(1);
-        boolean global;
-        if(letter == '0' || letter == '1' || letter == '4' || letter == '5' || letter == '8' || letter == '9' || letter == 'c' || letter == 'd'){
-            global = true;
+        try {
+            String time = new Timestamp(System.currentTimeMillis()).toString();
+            logger.info("Arrivato messaggio su topic " + topic +" timestamp "+time);
+            String payload = HelperMethods.bytesToHex(mqttMessage.getPayload());
+            //serializziamo i dati come string visto che le analisi fatte sono a livello dei caratteri
+            String snifferMac = payload.substring(0, 2)+ ":" + payload.substring(2,4) +":"+payload.substring(4, 6)+ ":"+payload.substring(6, 8)+ ":"+payload.substring(8, 10)+ ":"+payload.substring(10, 12);
+            String deviceMac = payload.substring(32, 34)+ ":" + payload.substring(34,36) +":"+payload.substring(36, 38)+ ":"+payload.substring(38, 40)+ ":"+payload.substring(40, 42)+ ":"+payload.substring(42, 44);
+            char letter = deviceMac.charAt(1);
+            boolean global;
+            if(letter == '0' || letter == '1' || letter == '4' || letter == '5' || letter == '8' || letter == '9' || letter == 'c' || letter == 'd'){
+                global = true;
+            }
+            else{
+                global = false;
+            }
+            int sequenceNumber = Integer.parseInt(payload.substring(56, 60),16);
+            String rawData = payload.substring(60, payload.length()-8);
+            Packet p = new Packet(Instant.now().toEpochMilli(), snifferMac, deviceMac, global, rawData, sequenceNumber, HelperMethods.parseParameters(rawData), payload.length() - 68);
+            packetsRepository.save(p);
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+            e.printStackTrace();
         }
-        else{
-            global = false;
-        }
-        int sequenceNumber = Integer.parseInt(payload.substring(56, 60),16);
-        String rawData = payload.substring(60, payload.length()-7);
-        Packet p = new Packet(Instant.now().toEpochMilli(), snifferMac, deviceMac, global, rawData, sequenceNumber, HelperMethods.parseParameters(rawData), payload.length() - 68);
-        packetsRepository.save(p);
     }
 
     @Override
