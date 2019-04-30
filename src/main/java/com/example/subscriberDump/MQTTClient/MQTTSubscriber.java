@@ -149,7 +149,8 @@ public class MQTTSubscriber implements MqttCallback, DisposableBean, Initializin
             else{
                 global = false;
             }
-            int sequenceNumber = Integer.parseInt(payload.substring(56, 60),16);
+//attenzione che il sequence number è formato da 12 bit di sequence number e 4 bit di fragment number, vanno parsati solo i primi 3 caratteri hex  
+            int sequenceNumber = Integer.parseInt(payload.substring(56, 59),16); //il carattere 59 è il fragment number
             String rawData = payload.substring(60, payload.length()-8);
             Packet p = new Packet(Instant.now().toEpochMilli(), snifferMac, deviceMac, global, rawData, sequenceNumber, HelperMethods.parseParameters(rawData), payload.length() - 68);
             packetsRepository.save(p);
