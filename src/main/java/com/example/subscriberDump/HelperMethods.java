@@ -27,7 +27,11 @@ public class HelperMethods {
             if(length == 0){
                 value = "";
             } else{
-                value = taggedParameters.substring(i, i + (length * 2));
+                if(tag == "00"){
+                    value = hexToAscii(taggedParameters.substring(i, i + (length * 2)));
+                } else{
+                    value = taggedParameters.substring(i, i + (length * 2));
+                }
             }
             list.add(new TaggedParameter(tag, length, value));
             i += length * 2;
@@ -42,5 +46,14 @@ public class HelperMethods {
             hexChars[j * 2 + 1] = hexArray[v & 0x0F];
         }
         return new String(hexChars);
+    }
+
+    public static String hexToAscii(String hexString){
+        StringBuilder sb = new StringBuilder("");
+        for(int i = 0; i < hexString.length(); i += 2 ){
+            String str = hexString.substring(i, i+2);
+            sb.append((char) Integer.parseInt(str,16));
+        }
+        return sb.toString();
     }
 }
