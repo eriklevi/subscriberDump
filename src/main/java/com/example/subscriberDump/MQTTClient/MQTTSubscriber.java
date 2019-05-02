@@ -20,6 +20,9 @@ import org.springframework.stereotype.Component;
 import javax.xml.bind.DatatypeConverter;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.temporal.WeekFields;
 import java.util.List;
 
 @Component
@@ -152,7 +155,19 @@ public class MQTTSubscriber implements MqttCallback, DisposableBean, Initializin
 //attenzione che il sequence number è formato da 12 bit di sequence number e 4 bit di fragment number, vanno parsati solo i primi 3 caratteri hex  
             int sequenceNumber = Integer.parseInt(payload.substring(58, 60)+payload.charAt(56),16); //il carattere 59 è il fragment number
             String rawData = payload.substring(60, payload.length()-8);
-            Packet p = new Packet(Instant.now().toEpochMilli(), snifferMac, deviceMac, global, rawData, sequenceNumber, HelperMethods.parseParameters(rawData), payload.length() - 68);
+            long now = Instant.now().toEpochMilli();
+            Packet p = new Packet(now, snifferMac, deviceMac, global, rawData, sequenceNumber, HelperMethods.parseParameters(rawData), payload.length() - 68);
+            LocalDateTime t = Instant.ofEpochMilli(p.getTimestamp()).atZone(ZoneId.systemDefault()).toLocalDateTime();
+            p.setYear(t.getYear());
+            p.setMonth(t.getMonthValue());
+            p.setWeekOfYear(t.get(WeekFields.ISO.weekOfYear()));
+            p.setDayOfMonth(t.getDayOfMonth());
+            p.setDayOfWeek(t.getDayOfWeek().getValue());
+            p.setHour(t.getHour());
+            p.setQuarter(t.getMinute()/15+1); //raggruppo su 15 minuti 1-4...0-14 15-29.....
+            p.setFiveMinute(t.getMinute()/5+1); //raggruppo per 5 minuti 1-12...0-4 5-9.....
+            p.setTenMinute(t.getMinute()/10+1);
+            p.setMinute(t.getMinute());
             packetsRepository.save(p);
         } catch (Exception e) {
             System.out.println(e.getMessage());
