@@ -2,6 +2,8 @@ package com.example.subscriberDump.entity;
 
 public class TaggedParameter {
     String tag;
+    String oui;
+    String completeOui;
     int length;
     String value;
 
@@ -37,5 +39,21 @@ public class TaggedParameter {
 
     public void setValue(String value) {
         this.value = value;
+    }
+
+    public String getOui() {
+        return oui;
+    }
+
+    public void setOui(String oui) {
+        this.oui = oui;
+    }
+
+    public String getCompleteOui() {
+        return completeOui;
+    }
+
+    public void setCompleteOui(String completeOui) {
+        this.completeOui = completeOui;
     }
 }

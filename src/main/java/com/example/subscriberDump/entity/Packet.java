@@ -6,13 +6,15 @@ import org.springframework.data.mongodb.core.mapping.Document;
 import java.util.ArrayList;
 import java.util.List;
 
-@Document("rawPackets")
+@Document("rawPacketsFinal")
 public class Packet {
     @Id
     private String id;
     private long timestamp;
     private String snifferMac;
     private String deviceMac;
+    private String oui;
+    private String completeOui;
     private boolean global;
     private String rawData;
     private int sequenceNumber;
@@ -192,5 +194,21 @@ public class Packet {
 
     public void setTenMinute(int tenMinute) {
         this.tenMinute = tenMinute;
+    }
+
+    public String getOui() {
+        return oui;
+    }
+
+    public void setOui(String oui) {
+        this.oui = oui;
+    }
+
+    public String getCompleteOui() {
+        return completeOui;
+    }
+
+    public void setCompleteOui(String completeOui) {
+        this.completeOui = completeOui;
     }
 }

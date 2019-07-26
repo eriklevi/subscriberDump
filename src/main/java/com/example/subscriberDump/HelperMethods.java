@@ -33,6 +33,7 @@ public class HelperMethods {
                     value = taggedParameters.substring(i, i + (length * 2));
                 }
             }
+            TaggedParameter tp = new TaggedParameter(tag, length, value);
             list.add(new TaggedParameter(tag, length, value));
             i += length * 2;
         }

@@ -1,7 +1,10 @@
 package com.example.subscriberDump.MQTTClient;
 
 import com.example.subscriberDump.HelperMethods;
+import com.example.subscriberDump.entity.OUI;
 import com.example.subscriberDump.entity.Packet;
+import com.example.subscriberDump.entity.TaggedParameter;
+import com.example.subscriberDump.repository.OUIRepository;
 import com.example.subscriberDump.repository.PacketsRepository;
 import org.eclipse.paho.client.mqttv3.*;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
@@ -24,6 +27,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.temporal.WeekFields;
 import java.util.List;
+import java.util.Optional;
 
 @Component
 public class MQTTSubscriber implements MqttCallback, DisposableBean, InitializingBean {
@@ -57,10 +61,13 @@ public class MQTTSubscriber implements MqttCallback, DisposableBean, Initializin
 
     private MqttClient mqttClient;
 
+    private final OUIRepository ouiRepository;
+
     @Autowired
-    public MQTTSubscriber(PacketsRepository packetsRepository, DiscoveryClient discoveryClient){
+    public MQTTSubscriber(PacketsRepository packetsRepository, DiscoveryClient discoveryClient, OUIRepository ouiRepository){
         this.packetsRepository = packetsRepository;
         this.discoveryClient = discoveryClient;
+        this.ouiRepository = ouiRepository;
     }
 
     /**
@@ -168,6 +175,34 @@ public class MQTTSubscriber implements MqttCallback, DisposableBean, Initializin
             p.setFiveMinute(t.getMinute()/5+1); //raggruppo per 5 minuti 1-12...0-4 5-9.....
             p.setTenMinute(t.getMinute()/10+1);
             p.setMinute(t.getMinute());
+            //inserimento oui
+            Optional<OUI> optionalOUIDevice = ouiRepository.findByOui(p.getDeviceMac().substring(0, 8));
+            if (optionalOUIDevice.isPresent()) {
+                p.setOui(optionalOUIDevice.get().getShortName()); //set device mac oui
+                p.setCompleteOui(optionalOUIDevice.get().getCompleteName());
+            } else {
+                p.setOui("Unknown");
+                p.setCompleteOui("Unknown");
+            }
+            // inserimento oui in tag dd
+            for(TaggedParameter tp : p.getTaggedParameters()){
+                if (tp.getTag().startsWith("dd")) {
+                    String m = tp.getTag().substring(2, 8);
+                    String newM = ""+m.charAt(0) + m.charAt(1) + ":" + m.charAt(2) + m.charAt(3) + ":" + m.charAt(4) + m.charAt(5);
+                    optionalOUIDevice = ouiRepository.findByOui(newM);
+                    if (optionalOUIDevice.isPresent()) {
+                        tp.
+                        TaggedParameterDD taggedParameterDD = new TaggedParameterDD(tp.getTag(), tp.getLength(), tp.getValue(), optionalOUIDevice.get().getShortName(), optionalOUIDevice.get().getCompleteName(), newM);
+                        newTags.add(taggedParameterDD);
+                    } else {
+                        TaggedParameterDD taggedParameterDD = new TaggedParameterDD(tp.getTag(), tp.getLength(), tp.getValue(), "Unknown", "Unknown", newM);
+                        newTags.add(taggedParameterDD);
+                    }
+                } else {
+                    newTags.add(tp);
+                }
+            }
+
             packetsRepository.save(p);
         } catch (Exception e) {
             System.out.println(e.getMessage());
