@@ -15,6 +15,11 @@ public class Packet {
     private String deviceMac;
     private String oui;
     private String completeOui;
+    private String fingerprintv1;
+    private String fingerprintv2;
+    private String fingerprintv3;
+    private String ssid;
+    private int ssidLen;
     private boolean global;
     private String rawData;
     private int sequenceNumber;
@@ -210,5 +215,45 @@ public class Packet {
 
     public void setCompleteOui(String completeOui) {
         this.completeOui = completeOui;
+    }
+
+    public String getFingerprintv1() {
+        return fingerprintv1;
+    }
+
+    public void setFingerprintv1(String fingerprintv1) {
+        this.fingerprintv1 = fingerprintv1;
+    }
+
+    public String getFingerprintv2() {
+        return fingerprintv2;
+    }
+
+    public void setFingerprintv2(String fingerprintv2) {
+        this.fingerprintv2 = fingerprintv2;
+    }
+
+    public String getFingerprintv3() {
+        return fingerprintv3;
+    }
+
+    public void setFingerprintv3(String fingerprintv3) {
+        this.fingerprintv3 = fingerprintv3;
+    }
+
+    public String getSsid() {
+        return ssid;
+    }
+
+    public void setSsid(String ssid) {
+        this.ssid = ssid;
+    }
+
+    public int getSsidLen() {
+        return ssidLen;
+    }
+
+    public void setSsidLen(int ssidLen) {
+        this.ssidLen = ssidLen;
     }
 }

@@ -9,6 +9,12 @@ public class HelperMethods {
 
     private final static char[] hexArray = "0123456789abcdef".toCharArray();
 
+    /**
+     * This function is used to parse the parameters inside the probe request frame.
+     *
+     * @param taggedParameters A string containing the probe request frame payload as hex characters, starting from 00...
+     * @return A list containing all the tags as TaggedParameter object
+     */
     public static List<TaggedParameter> parseParameters(String taggedParameters){
         List<TaggedParameter> list = new ArrayList<>();
         int i = 0;
@@ -17,7 +23,7 @@ public class HelperMethods {
         int length;
         while(i < taggedParameters.length()){
             tag = taggedParameters.substring(i, i + 2);
-            //nel caso di tag dd è necessario specificare OUI (3 byte ) ed il successivo vendor specific OUI type (1 byte)
+            //in this case it's necessary to indicate the OUI (3 byte ) and the subsequent vendor specific OUI type (1 byte)
             if(tag.equals("dd")){
                 tag = tag.concat(taggedParameters.substring(i + 4, i + 12));
             }
@@ -27,10 +33,15 @@ public class HelperMethods {
             if(length == 0){
                 value = "";
             } else{
-                if(tag == "00"){
-                    value = hexToAscii(taggedParameters.substring(i, i + (length * 2)));
+                /*
+                In this case we have to consider the 00 tag (Specified ssid)
+                If the tag has a length > 0 we can convert the value as
+                 */
+                String hexString = taggedParameters.substring(i, i + (length * 2));
+                if(tag.equals("00")){
+                    value = hexToAscii(hexString);
                 } else{
-                    value = taggedParameters.substring(i, i + (length * 2));
+                    value = hexString;
                 }
             }
             TaggedParameter tp = new TaggedParameter(tag, length, value);
@@ -39,6 +50,12 @@ public class HelperMethods {
         }
         return list;
     }
+
+    /**
+     * Converts a byteArray in a string of corresponding hex characters
+     * @param bytes The input byte array
+     * @return Byte array as hex string
+     */
     public static String bytesToHex(byte[] bytes) {
         char[] hexChars = new char[bytes.length * 2];
         for ( int j = 0; j < bytes.length; j++ ) {
@@ -49,6 +66,11 @@ public class HelperMethods {
         return new String(hexChars);
     }
 
+    /**
+     * Converts a hex characters string in the corresponding ASCII characters
+     * @param hexString The string to convert
+     * @return Hex string converted to ASCII string
+     */
     public static String hexToAscii(String hexString){
         StringBuilder sb = new StringBuilder("");
         for(int i = 0; i < hexString.length(); i += 2 ){

@@ -17,10 +17,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.client.ServiceInstance;
 import org.springframework.cloud.client.discovery.DiscoveryClient;
-import org.springframework.cloud.netflix.eureka.EnableEurekaClient;
 import org.springframework.stereotype.Component;
+import org.springframework.util.DigestUtils;
 
-import javax.xml.bind.DatatypeConverter;
+import java.io.ByteArrayOutputStream;
+import java.nio.ByteBuffer;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -28,6 +29,7 @@ import java.time.ZoneId;
 import java.time.temporal.WeekFields;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Component
 public class MQTTSubscriber implements MqttCallback, DisposableBean, InitializingBean {
@@ -80,21 +82,43 @@ public class MQTTSubscriber implements MqttCallback, DisposableBean, Initializin
         MqttConnectOptions connectionOptions = new MqttConnectOptions();
         try {
             this.mqttClient = new MqttClient(brokerUrl, clientId, persistence);
-            connectionOptions.setCleanSession(true);
-            connectionOptions.setAutomaticReconnect(autoReconnect); //try to reconnect to server from 1 second after fail up to 2 minutes delay
-            if(useCredentials){
-                connectionOptions.setUserName(userName);
-                connectionOptions.setPassword(password.toCharArray());
-            }
-            connectionOptions.setKeepAliveInterval(keepAliveInterval);
-            connectionOptions.setConnectionTimeout(0); //wait until connection successful or fail
             this.mqttClient.setCallback(this);
-            this.mqttClient.connect(connectionOptions);
         } catch (MqttException me) {
             logger.error("resason "+ me.getReasonCode());
             logger.error("message "+ me.getMessage());
             logger.error("cause "+ me.getCause());
             me.printStackTrace();
+        }
+    }
+
+    private void connect(){
+        boolean success = false;
+        while(!success) {
+            try {
+                MqttConnectOptions connectionOptions = new MqttConnectOptions();
+                connectionOptions.setCleanSession(true);
+                connectionOptions.setAutomaticReconnect(autoReconnect); //try to reconnect to server from 1 second after fail up to 2 minutes delay
+                if(useCredentials){
+                    connectionOptions.setUserName(userName);
+                    connectionOptions.setPassword(password.toCharArray());
+                }
+                connectionOptions.setKeepAliveInterval(keepAliveInterval);
+                connectionOptions.setConnectionTimeout(0); //wait until connection successful or fail
+                this.mqttClient.connect(connectionOptions);
+                success = true;
+            } catch (MqttException me) {
+                logger.error("resason "+ me.getReasonCode());
+                logger.error("message "+ me.getMessage());
+                logger.error("cause "+ me.getCause());
+                me.printStackTrace();
+                logger.info("Reconnection in 30 seconds");
+                try{
+                    Thread.sleep(30000);
+                }
+                catch(Exception e) {
+                    logger.error("Eccezzione nella thread sleep");
+                }
+            }
         }
     }
 
@@ -121,6 +145,8 @@ public class MQTTSubscriber implements MqttCallback, DisposableBean, Initializin
     @Override
     public void connectionLost(Throwable throwable) {
         logger.info("Connection with the broker lost!");
+        logger.info("Reconnecting!");
+        connect();
     }
 
     /**
@@ -191,18 +217,84 @@ public class MQTTSubscriber implements MqttCallback, DisposableBean, Initializin
                     String newM = ""+m.charAt(0) + m.charAt(1) + ":" + m.charAt(2) + m.charAt(3) + ":" + m.charAt(4) + m.charAt(5);
                     optionalOUIDevice = ouiRepository.findByOui(newM);
                     if (optionalOUIDevice.isPresent()) {
-                        tp.
-                        TaggedParameterDD taggedParameterDD = new TaggedParameterDD(tp.getTag(), tp.getLength(), tp.getValue(), optionalOUIDevice.get().getShortName(), optionalOUIDevice.get().getCompleteName(), newM);
-                        newTags.add(taggedParameterDD);
-                    } else {
-                        TaggedParameterDD taggedParameterDD = new TaggedParameterDD(tp.getTag(), tp.getLength(), tp.getValue(), "Unknown", "Unknown", newM);
-                        newTags.add(taggedParameterDD);
+                        tp.setOui(optionalOUIDevice.get().getShortName());
+                        tp.setCompleteOui(optionalOUIDevice.get().getCompleteName());
                     }
-                } else {
-                    newTags.add(tp);
+                }
+                if (tp.getTag().equals("00") && tp.getLength() > 0) {
+                    p.setSsid(tp.getValue());
+                    p.setSsidLen(tp.getLength());
                 }
             }
-
+            //calcolo fp come su sniffer
+            Integer lengthWithoutTag00 = (p.getTaggedParametersLength()/2)-p.getTaggedParameters().get(0).getLength(); //tag 00 is always first
+            byte[] length = ByteBuffer.allocate(4).putInt(lengthWithoutTag00).array();
+            String tagList = p.getTaggedParameters().stream()
+                    .map( o -> o.getTag())
+                    .collect(Collectors.joining(""));
+            String contentList = p.getTaggedParameters().stream()
+                    .filter( o -> {
+                        String tag = o.getTag();
+                        if(tag.startsWith("dd") || tag.equals("01") || tag.equals("32") || tag.equals("7f") || tag.equals("2d") || tag.equals("bf"))
+                            return true;
+                        return false;
+                    })
+                    .map(o -> o.getValue())
+                    .collect(Collectors.joining(""));
+            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+            outputStream.write(length);
+            outputStream.write(tagList.getBytes());
+            outputStream.write(contentList.getBytes());
+            //data = (lunghezzaPayload - lunghezzaSSID) + stringa dei tag + contenuto dei tag scelti
+            p.setFingerprintv1(HelperMethods.bytesToHex(DigestUtils.md5Digest(outputStream.toByteArray())));
+            ////////////////////////////
+            //altri metodi
+            contentList = p.getTaggedParameters().stream()
+                    .filter( o -> {
+                        String tag = o.getTag();
+                        if(tag.equals("00") || tag.equals("03") || tag.equals("dd0050f208") ||tag.equals("dd00904c04") || tag.equals("6b") || tag.equals("7f") || tag.equals("2d"))
+                            return false;
+                        return true;
+                    })
+                    .map(o -> o.getValue())
+                    .collect(Collectors.joining(""));
+            outputStream = new ByteArrayOutputStream();
+            outputStream.write(contentList.getBytes());
+            //data = (lunghezzaPayload - lunghezzaSSID) + stringa dei tag + contenuto dei tag scelti
+            p.setFingerprintv2(HelperMethods.bytesToHex(DigestUtils.md5Digest(outputStream.toByteArray())));
+            contentList = p.getTaggedParameters().stream()
+                    .filter( o -> {
+                        String tag = o.getTag();
+                        if(tag.equals("00") || tag.equals("03") ||tag.equals("6b"))
+                            return false;
+                        return true;
+                    })
+                    .map(o -> {
+                        String tag = o.getTag();
+                        String value = o.getValue();
+                        if(tag.equals("dd0050f208"))
+                            return value.substring(0,value.length()-2);
+                        if(tag.equals("dd00904c04")){
+                            if(value.length() >= 20)
+                                return value.substring(0,14)+value.substring(20);
+                        }
+                        if(tag.equals("2d")){
+                            if(value.length()>=10)
+                                return value.substring(2,8)+value.substring(10);
+                        }
+                        if(tag.equals("7f")){
+                            if(value.length() >= 12)
+                                return value.substring(0,6)+value.substring(8,12);
+                        }
+                        //default case
+                        return value;
+                    })
+                    .collect(Collectors.joining(""));
+            ByteArrayOutputStream outputStream2 = new ByteArrayOutputStream();
+            outputStream2.write(contentList.getBytes());
+            //data = (lunghezzaPayload - lunghezzaSSID) + stringa dei tag + contenuto dei tag scelti
+            p.setFingerprintv3(HelperMethods.bytesToHex(DigestUtils.md5Digest(outputStream2.toByteArray())));
+            /////////////////////////////
             packetsRepository.save(p);
         } catch (Exception e) {
             System.out.println(e.getMessage());
@@ -224,6 +316,7 @@ public class MQTTSubscriber implements MqttCallback, DisposableBean, Initializin
     public void afterPropertiesSet() throws Exception {
         this.getBrokerInstance(); //uses Discovery client so it must be called after eureka setup
         this.config();
+        connect();
         this.mqttClient.subscribe(topic, this.qos);
     }
 }

@@ -15,6 +15,8 @@ public class TaggedParameter {
         this.tag = tag;
         this.length = length;
         this.value = value;
+        this.oui = null;
+        this.completeOui = null;
     }
 
     public int getLength() {
