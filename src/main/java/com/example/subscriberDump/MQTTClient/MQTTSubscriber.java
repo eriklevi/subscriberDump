@@ -76,7 +76,6 @@ public class MQTTSubscriber implements MqttCallback, DisposableBean, Initializin
      * This function creates the MQTT client instance
      */
     private void config() {
-
         String brokerUrl = "tcp://" + this.broker + ":" + this.port;
         MemoryPersistence persistence = new MemoryPersistence();
         MqttConnectOptions connectionOptions = new MqttConnectOptions();
